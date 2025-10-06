@@ -3,32 +3,44 @@
 use std::fs::{File, write};
 use std::io::{self, BufRead};
 use std::path::Path;
+use std::cmp::Ordering;
 
 fn main() {
     let data: Vec<String> = make_clean_fasta_data("rosalind_edit.txt");
 
-    let ans: usize = distance(&data[0],&data[1]);
+    let ans: usize = distance(&data[1],&data[0]);
     println!("{}",ans);
     write("ans.txt",ans.to_string()).expect("should write to file");
 }
 
-// CHECK INDEXING !!!!!!!!!!!!!!!!
-fn distance(s:&String, t:&String) -> usize {
-    let mut d: Vec<Vec<usize>> = vec![vec![0usize;s.len()+1];t.len()+1]; // initialize matrix
+fn distance(s1:&String, s2:&String) -> usize {
+    //compare sizes of s1 and s2 for optimal space allocation
+    let s: &String;
+    let t: &String;
+    match s1.cmp(s2){
+        Ordering::Greater => {
+            s = s2;
+            t = s1;
+        }
+        _ => {
+            s = s1;
+            t = s2;
+        }
+    }
+    //s is shortest string
+    //t is longer string
+
+    let mut d:Vec<Vec<usize>> = vec![vec![0usize;s.len()+1];2]; // initialize columns
 
     // source prefixes can be transformed into empty string by
     // dropping all characters
     for i in 1..s.len(){
         d[0][i] = i;
     }
-
     // same for t prefix now
+    d[1][0] = 1;
 
-    for j in 1..t.len(){
-        d[j][0] = j;
-    }
-
-    // current cell is [j+1][i+1]
+    // current cell is [1][i+1]
     for j in 0..t.len(){
         for i in 0..s.len(){
 
@@ -39,21 +51,23 @@ fn distance(s:&String, t:&String) -> usize {
                 substitution_cost = 1;
             }
 
-            let left_substitution_cost: usize = d[j+1][i] + 1; //deletion
-            let top_substitution_cost: usize = d[j][i+1] + 1; //insertion
-            let diag_substitution_cost: usize = d[j][i] + substitution_cost; //substitution
+            let left_substitution_cost: usize = d[1][i] + 1; //deletion
+            let top_substitution_cost: usize = d[0][i+1] + 1; //insertion
+            let diag_substitution_cost: usize = d[0][i] + substitution_cost; //substitution
 
             let subs: [usize; 3] = [left_substitution_cost,top_substitution_cost,diag_substitution_cost];
             let minval: Option<&usize> = subs.iter().min();
 
             match minval {
-                Some(min) => d[j+1][i+1] = *min,
+                Some(min) => d[1][i+1] = *min,
                 None => println!("empty vector"),
             }
         }
+        d[0] = d[1].clone();
+
     }
     //println!("{:?}",d); //debug
-    return d[t.len()][s.len()];
+    return d[1][s.len()];
 }
 
 fn make_clean_fasta_data(filepath:&str) -> Vec<String> {
