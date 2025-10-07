@@ -79,7 +79,7 @@ fn make_clean_fasta_data(filepath:&str) -> Vec<String> {
         // Consumes the iterator, returns an (Optional) String
         for line in lines.map_while(Result::ok) {
             //println!("{}",line); //debug
-            let tag = &line[..1]; //FASTA ID line
+            let tag: &str = &line[..1]; //FASTA ID line
             if tag == ">" { // if ID line
                 data.push(data_line); // save previous strand //MAKES EMPTY FIRST SLOT
                 data_line = String::new(); // start new strand
