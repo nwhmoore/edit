@@ -3,22 +3,25 @@
 use std::fs::{File, write};
 use std::io::{self, BufRead};
 use std::path::Path;
-use std::cmp::{Ordering,min};
+use std::cmp::min;
 
 fn main() {
-    let data: Vec<String> = make_clean_fasta_data("test.txt");
+    let data: Vec<String> = make_clean_fasta_data("rosalind_edit.txt");
 
     let ans: usize = hirschberg(&data[0],&data[1]);
-    println!("Hirschberg:{}",ans);
+    println!("Hirschberg: {}", ans);
 
     let ans2:usize = ukkonen(&data[0],&data[1]).unwrap();
-    println!("Ukkonen:{}",ans2);
+    println!("Ukkonen: {}", ans2);
+
+    //can choose ans or ans2 to write based on which algorithm you want
     write("ans.txt",ans.to_string()).expect("should write to file");
 }
 
 fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
     let a: &String;
     let b: &String;
+    /* broken!?
     match s1.cmp(s2){
         Ordering::Greater => {
             a = s2;
@@ -28,6 +31,15 @@ fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
             a = s1;
             b = s2;
         }
+    }
+    */
+
+    if s1.len() <= s2.len(){
+        a = s1;
+        b = s2;
+    } else {
+        a = s2;
+        b = s1;
     }
     //a is shortest string
     //b is longer string
@@ -101,6 +113,7 @@ fn hirschberg(s1:&String, s2:&String) -> usize {
     //compare sizes of s1 and s2 for optimal space allocation
     let s: &String;
     let t: &String;
+    /* ukkonen update broke this? maybe idk how Ordering works with str...
     match s1.cmp(s2){
         Ordering::Greater => {
             s = s2;
@@ -111,6 +124,14 @@ fn hirschberg(s1:&String, s2:&String) -> usize {
             t = s2;
         }
     }
+    */
+    if s1.len() <= s2.len() {
+        s = s1;
+        t = s2;
+    } else {
+        s = s2;
+        t = s1;
+    }
     //s is shortest string
     //t is longer string
 
@@ -118,14 +139,13 @@ fn hirschberg(s1:&String, s2:&String) -> usize {
 
     // source prefixes can be transformed into empty string by
     // dropping all characters
-    for i in 1..s.len(){
+    for i in 1..s.len()+1{
         d[0][i] = i;
     }
-    // same for t prefix now
-    d[1][0] = 1;
 
     // current cell is [1][i+1]
     for j in 0..t.len(){
+        d[1][0] = j+1; // preallocate t prefix
         for i in 0..s.len(){
 
             let substitution_cost:usize;
@@ -147,6 +167,11 @@ fn hirschberg(s1:&String, s2:&String) -> usize {
                 None => println!("empty vector"),
             }
         }
+        /* DEBUGGING
+        println!("{:?}",d[0]);
+        println!("{:?}",d[1]);
+        println!("------");
+        */
         d[0] = d[1].clone();
 
     }
