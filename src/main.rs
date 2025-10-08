@@ -11,9 +11,12 @@ fn main() {
     let ans: usize = hirschberg(&data[0],&data[1]);
     println!("Hirschberg: {}", ans);
 
-    let ans2:usize = ukkonen(&data[0],&data[1]).unwrap();
-    println!("Ukkonen: {}", ans2);
-
+    let ans2: Option<usize> = ukkonen(&data[0],&data[1]);
+    match ans2{
+        Some(dist) => println!("Ukkonen: {}", dist),
+        None => println!("Ukkonen: Greater than 75% divergence")
+    }
+   
     //can choose ans or ans2 to write based on which algorithm you want
     write("ans.txt",ans.to_string()).expect("should write to file");
 }
@@ -21,18 +24,6 @@ fn main() {
 fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
     let a: &String;
     let b: &String;
-    /* broken!?
-    match s1.cmp(s2){
-        Ordering::Greater => {
-            a = s2;
-            b = s1;
-        }
-        _ => {
-            a = s1;
-            b = s2;
-        }
-    }
-    */
 
     if s1.len() <= s2.len(){
         a = s1;
