@@ -1,19 +1,103 @@
-// https://en.wikipedia.org/wiki/Wagner%E2%80%93Fischer_algorithm
+//https://www.cs.helsinki.fi/u/ukkonen/InfCont85.PDF
 
 use std::fs::{File, write};
 use std::io::{self, BufRead};
 use std::path::Path;
-use std::cmp::Ordering;
+use std::cmp::{Ordering,min};
 
 fn main() {
-    let data: Vec<String> = make_clean_fasta_data("rosalind_edit.txt");
+    let data: Vec<String> = make_clean_fasta_data("test.txt");
 
-    let ans: usize = distance(&data[1],&data[0]);
-    println!("{}",ans);
+    let ans: usize = hirschberg(&data[0],&data[1]);
+    println!("Hirschberg:{}",ans);
+
+    let ans2:usize = ukkonen(&data[0],&data[1]).unwrap();
+    println!("Ukkonen:{}",ans2);
     write("ans.txt",ans.to_string()).expect("should write to file");
 }
 
-fn distance(s1:&String, s2:&String) -> usize {
+fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
+    let a: &String;
+    let b: &String;
+    match s1.cmp(s2){
+        Ordering::Greater => {
+            a = s2;
+            b = s1;
+        }
+        _ => {
+            a = s1;
+            b = s2;
+        }
+    }
+    //a is shortest string
+    //b is longer string
+
+    let m: usize = a.len();
+    let n: usize = b.len();
+
+    //threshold! MAX DIVERGENCE 75%
+    let t:usize = n - (n/2)/2; //75%, can be changed in future?
+    let delta:usize = 1; //minimum cost of single edit
+
+    //initialize matrix
+    let mut mat: Vec<Vec<usize>> = vec![vec![usize::MAX - 1; n+1]; m+1];
+    for j in 0..n+1 {
+        mat[0][j] = j;
+    }
+    for i in 0..m+1 {
+        mat[i][0] = i;
+    }
+
+    if t/delta < n-m { // if the legnths are so different they immediately violate the threshold
+        return None
+    } else {
+        let p: usize = (t/delta - (n-m))/2; //diagonal band
+
+        //current mat cell is [i+1][j+1]
+        for i in 0..m { // for each row
+            //can define j loop range here
+            let col_start:usize;
+            if i <= p {
+                col_start = 0;
+            } else {
+                col_start = i-p;
+            }
+            let col_end:usize = min(n,i+(n-m)+p+1);
+
+            for j in col_start..col_end {
+                //evaluate d_ij from 3
+                let cost:usize;
+                if a[i..i+1] == b[j..j+1]{
+                    cost = 0;
+                } else {
+                    cost = 1;
+                }
+
+                let diag: usize = mat[i][j] + cost;
+                let top: usize = mat[i][j+1] + 1;
+                let left: usize = mat[i+1][j] + 1;
+
+                let costs: [usize; 3] = [diag,top,left];
+                let minval: Option<&usize> = costs.iter().min();
+
+                match minval {
+                    Some(min) => mat[i+1][j+1] = *min,
+                    None => println!("empty vector"),
+                }
+
+            }
+        }
+        /*
+        for i in 0..m+1 {
+            println!("{:?}",mat[i]); //debug
+        }
+        */
+        return Some(mat[m][n]);
+    }
+
+}
+
+fn hirschberg(s1:&String, s2:&String) -> usize {
     //compare sizes of s1 and s2 for optimal space allocation
     let s: &String;
     let t: &String;
