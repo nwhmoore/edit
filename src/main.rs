@@ -22,9 +22,9 @@ fn main() {
 }
 
 fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
+    // sort strings by length
     let a: &String;
     let b: &String;
-
     if s1.len() <= s2.len(){
         a = s1;
         b = s2;
@@ -38,12 +38,12 @@ fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
     let m: usize = a.len();
     let n: usize = b.len();
 
-    //threshold! MAX DIVERGENCE 75%
-    let t:usize = n - (n/2)/2; //75%, can be changed in future?
-    let delta:usize = 1; //minimum cost of single edit
+    //threshold! MAX DIVERGENCE
+    let max_t: usize = n - (n/2)/2; //75%, can be changed in future?
+    let delta: usize = 1; //minimum cost of single edit
 
     //initialize matrix
-    let mut mat: Vec<Vec<usize>> = vec![vec![usize::MAX - 1; n+1]; m+1];
+    let mut mat: Vec<Vec<usize>> = vec![vec![usize::MAX - 1; n+1]; m+1]; // initialize values to ~infinity
     for j in 0..n+1 {
         mat[0][j] = j;
     }
@@ -51,52 +51,80 @@ fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
         mat[i][0] = i;
     }
 
-    if t/delta < n-m { // if the legnths are so different they immediately violate the threshold
-        return None
-    } else {
-        let p: usize = (t/delta - (n-m))/2; //diagonal band
+    let mut dist:Option<usize> = None;
 
-        //current mat cell is [i+1][j+1]
-        for i in 0..m { // for each row
-            //can define j loop range here
-            let col_start:usize;
-            if i <= p {
-                col_start = 0;
-            } else {
-                col_start = i-p;
-            }
-            let col_end:usize = min(n,i+(n-m)+p+1);
+    let mut t: usize = 1;
+    let mut go: bool = true;
+    while go { //while below threshold
 
-            for j in col_start..col_end {
-                //evaluate d_ij from 3
-                let cost:usize;
-                if a[i..i+1] == b[j..j+1]{
-                    cost = 0;
+        let mut thresh_break: bool = true; // will be used to check if all costs are above temp threshold t
+
+        if t > max_t { // if we've increased t up to max threshold
+            dist = None; // return none, past threshold
+            go = false; // stop the while loop
+        } else if t/delta < n-m { // if the legnths are so different they immediately violate the threshold
+            t = t * 2; // increase the width of the diagonal
+        } else {
+            let p: usize = (t/delta - (n-m))/2; //diagonal band
+
+            //current mat cell is [i+1][j+1]
+            for i in 0..m { // for each row
+                // define j loop column range here
+                // restrict range to diagonal
+                let col_start:usize;
+                if i <= p {
+                    col_start = 0;
                 } else {
-                    cost = 1;
+                    col_start = i-p;
+                }
+                let col_end:usize = min(n,i+(n-m)+p+1);
+
+                thresh_break = true; // begin to check all costs vs threshold
+                for j in col_start..col_end { // for each column in diagonal band
+                    //evaluate d_ij from (3)
+                    let cost:usize;
+                    if a[i..i+1] == b[j..j+1]{ // if matching characters
+                        cost = 0;
+                    } else { // substitution
+                        cost = delta;
+                    }
+
+                    let diag: usize = mat[i][j] + cost; // match or sub
+                    let top: usize = mat[i][j+1] + delta; // indel
+                    let left: usize = mat[i+1][j] + delta; // indel
+
+                    // edit minimize cost
+                    let costs: [usize; 3] = [diag,top,left];
+                    let minval: Option<&usize> = costs.iter().min();
+                    match minval {
+                        Some(min) => mat[i+1][j+1] = *min,
+                        None => println!("empty vector"),
+                    }
+
+                    if mat[i+1][j+1] <= t { // if any cost is below the temp threshold t, ok to continue
+                        thresh_break = false;
+                    }
                 }
 
-                let diag: usize = mat[i][j] + cost;
-                let top: usize = mat[i][j+1] + 1;
-                let left: usize = mat[i+1][j] + 1;
-
-                let costs: [usize; 3] = [diag,top,left];
-                let minval: Option<&usize> = costs.iter().min();
-
-                match minval {
-                    Some(min) => mat[i+1][j+1] = *min,
-                    None => println!("empty vector"),
+                if thresh_break { // break if all costs are above threshold
+                    t = t * 2; // increase the temporary threshold t
+                    break; // break the row for loop, start over with higher t
                 }
+            }
+            /*
+            for i in 0..m+1 {
+                println!("{:?}",mat[i]); //debug
+            }
+            */
 
+            if !thresh_break { // if the temp threshold t was not broken to exit the row for loop
+                dist =  Some(mat[m][n]); // final element is the edit distance
+                go = false; // stop while loop
             }
         }
-        /*
-        for i in 0..m+1 {
-            println!("{:?}",mat[i]); //debug
-        }
-        */
-        return Some(mat[m][n]);
     }
+
+    return dist;
 
 }
 
