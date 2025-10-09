@@ -46,13 +46,6 @@ fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
     let max_t: usize = m - (m/2)/2; //75%, can be changed in future?
     let delta: usize = 1; //minimum cost of single edit
 
-    //initialize matrix
-    let mut mat: Vec<Vec<usize>> = vec![vec![usize::MAX - 1; n+1]; 2]; // initialize values to ~infinity
-    
-    for j in 0..n+1 { // initialize first row
-        mat[0][j] = j;
-    }
-
     let mut dist:Option<usize> = None;
 
     let mut t: usize = 1;
@@ -67,6 +60,12 @@ fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
         } else if t/delta < m - n { // if the lengths are so different they immediately violate the threshold
             t = t * 2; // increase the width of the diagonal
         } else {
+            //initialize matrix
+            let mut mat: Vec<Vec<usize>> = vec![vec![usize::MAX - 1; n+1]; 2]; // initialize values to ~infinity
+            for j in 0..n+1 { // initialize first row
+                mat[0][j] = j;
+            }
+
             let p: usize = (t/delta - (m-n))/2; //diagonal band
 
             //current mat cell is [1][j+1]
