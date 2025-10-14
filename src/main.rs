@@ -10,22 +10,23 @@ fn main() {
     let data: Vec<String> = make_clean_fasta_data("rosalind_edit.txt");
     let s1: &String = &data[0];
     let s2: &String = &data[1];
+    let threshold: f32 = 0.75;
 
     // various algorithms
     let ans: usize = hirschberg(s1,s2);
     println!("Hirschberg: {}", ans);
 
-    let ans2: Option<usize> = ukkonen(s1,s2);
+    let ans2: Option<usize> = ukkonen(s1,s2, threshold);
     match ans2{
         Some(dist) => println!("Ukkonen: {}", dist),
-        None => println!("Ukkonen: Greater than 75% divergence")
+        None => println!("Ukkonen: Greater than {}% divergence",threshold*100.)
     }
 
     //can choose ans or ans2 to write based on which algorithm you want
     write("ans.txt",ans.to_string()).expect("should write to file");
 }
 
-fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
+fn ukkonen(s1:&String, s2:&String, threshold:f32) -> Option<usize> {
     // sort strings by length
     let a: &String;
     let b: &String;
@@ -43,7 +44,8 @@ fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
     let n: usize = b.len();
 
     //threshold! MAX DIVERGENCE
-    let max_t: usize = m - (m/2)/2; //75%, can be changed in future?
+    //let max_t: usize = m - (m/2)/2; //75%, can be changed in future?
+    let max_t: usize = ((m as f32) * threshold).round() as usize;
     let delta: usize = 1; //minimum cost of single edit
 
     let mut dist:Option<usize> = None;
