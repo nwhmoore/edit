@@ -1,4 +1,4 @@
-//https://www.cs.helsinki.fi/u/ukkonen/InfCont85.PDF
+//https://academic.oup.com/bioinformatics/article/36/22-23/5282/6033580?login=true
 
 use std::fs::{File, write};
 use std::io::{self, BufRead};
@@ -6,24 +6,66 @@ use std::path::Path;
 use std::cmp::min;
 
 fn main() {
+    /*
     // gather data
     let data: Vec<String> = make_clean_fasta_data("rosalind_edit.txt");
     let s1: &String = &data[0];
     let s2: &String = &data[1];
+    */
+    let s1: &[u8] = b"GGTGCAGAGCTC";
+    let s2: &[u8] = b"GGTGAGAGTTGT";
     let threshold: f32 = 0.75; // maximum edit distance as decimal of longest string
 
     // various algorithms
-    let ans: usize = hirschberg(s1,s2);
-    println!("Hirschberg: {}", ans);
+    //let ans: usize = hirschberg(s1,s2);
+    //println!("Hirschberg: {}", ans);
 
+    /*
     let ans2: Option<usize> = ukkonen(s1,s2, threshold);
     match ans2{
         Some(dist) => println!("Ukkonen: {}", dist),
         None => println!("Ukkonen: Greater than {}% divergence",threshold*100.)
     }
+    */
+
+    let ans3: bool = sneaky_snake(s1,s2,threshold);
 
     //can choose ans or ans2 to write based on which algorithm you want
-    write("ans.txt",ans.to_string()).expect("should write to file");
+    //write("ans.txt",ans.to_string()).expect("should write to file");
+}
+
+fn sneaky_snake(r:&[u8], q:&[u8], threshold:f32) -> bool{
+    //assume for now that s1 and s2 are equal length (default s1 shorter)
+    let m: usize = r.len(); //reference sequence
+    let n: usize = q.len(); //query sequence
+    //let e: usize = ((m as f32) * threshold).round() as usize; // number of allowed edits
+    let e: usize = 3;
+    let w: usize = 2*e+1; // width of chip maze
+
+    // GENERATION OF MAZE --- CAN BE PARALLELIZED IN FUTURE (each cell value can be generated independently)
+    //let mut z: Vec<Vec<bool>> = vec![vec![true; m]; w]; //chip maze Z
+    let mut z: Vec<Vec<usize>> = vec![vec![1usize; m]; w]; //chip maze Z
+
+    //naive iterative generation approach for now
+    for j in 0..m { // for each column (each character in reference)
+        for i in 0..w { // for each row (each character in query in the 2*e + 1 window)
+            let lwe: bool = (j as i32) - (i as i32) - 1 >= 0; // check if left window edge requires negative indexing of q
+            let rwe: bool = (j as i32) + (i as i32) - (e as i32) <= (n as i32) - 1; // check if right window edge goes past the lenght of q
+            if i == e && q[j] == r[j] { //check if matching in place
+                z[i][j] = 0;
+            } else if lwe && i <= e-1 && q[j-i-1] == r[j] { // check if matching on LHS
+                z[i][j] = 0;
+            } else if rwe && i > e && q[j+i-e] == r[j] { // check if matching on RHS
+                z[i][j] = 0;
+            }
+        }
+    }
+
+
+    for i in 0..w {
+        println!("{:?}",z[i]);
+    }
+    return true; //placeholder
 }
 
 fn ukkonen(s1:&String, s2:&String, threshold:f32) -> Option<usize> {
