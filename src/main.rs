@@ -10,7 +10,7 @@ fn main() {
     let data: Vec<String> = make_clean_fasta_data("rosalind_edit.txt");
     let s1: &String = &data[0];
     let s2: &String = &data[1];
-    let threshold: f32 = 0.75;
+    let threshold: f32 = 0.75; // maximum edit distance as decimal of longest string
 
     // various algorithms
     let ans: usize = hirschberg(s1,s2);
