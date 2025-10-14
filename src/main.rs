@@ -6,50 +6,47 @@ use std::path::Path;
 use std::cmp::min;
 
 fn main() {
+    // gather data
     let data: Vec<String> = make_clean_fasta_data("rosalind_edit.txt");
+    let s1: &String = &data[0];
+    let s2: &String = &data[1];
+    let threshold: f32 = 0.75; // maximum edit distance as decimal of longest string
 
-    let ans: usize = hirschberg(&data[0],&data[1]);
+    // various algorithms
+    let ans: usize = hirschberg(s1,s2);
     println!("Hirschberg: {}", ans);
 
-    let ans2: Option<usize> = ukkonen(&data[0],&data[1]);
+    let ans2: Option<usize> = ukkonen(s1,s2, threshold);
     match ans2{
         Some(dist) => println!("Ukkonen: {}", dist),
-        None => println!("Ukkonen: Greater than 75% divergence")
+        None => println!("Ukkonen: Greater than {}% divergence",threshold*100.)
     }
-   
+
     //can choose ans or ans2 to write based on which algorithm you want
     write("ans.txt",ans.to_string()).expect("should write to file");
 }
 
-fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
+fn ukkonen(s1:&String, s2:&String, threshold:f32) -> Option<usize> {
     // sort strings by length
     let a: &String;
     let b: &String;
     if s1.len() <= s2.len(){
-        a = s1;
-        b = s2;
-    } else {
         a = s2;
         b = s1;
+    } else {
+        a = s1;
+        b = s2;
     }
-    //a is shortest string
-    //b is longer string
+    //a is longer string
+    //b is shorter string
 
     let m: usize = a.len();
     let n: usize = b.len();
 
     //threshold! MAX DIVERGENCE
-    let max_t: usize = n - (n/2)/2; //75%, can be changed in future?
+    //let max_t: usize = m - (m/2)/2; //75%, can be changed in future?
+    let max_t: usize = ((m as f32) * threshold).round() as usize;
     let delta: usize = 1; //minimum cost of single edit
-
-    //initialize matrix
-    let mut mat: Vec<Vec<usize>> = vec![vec![usize::MAX - 1; n+1]; m+1]; // initialize values to ~infinity
-    for j in 0..n+1 {
-        mat[0][j] = j;
-    }
-    for i in 0..m+1 {
-        mat[i][0] = i;
-    }
 
     let mut dist:Option<usize> = None;
 
@@ -62,22 +59,29 @@ fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
         if t > max_t { // if we've increased t up to max threshold
             dist = None; // return none, past threshold
             go = false; // stop the while loop
-        } else if t/delta < n-m { // if the legnths are so different they immediately violate the threshold
+        } else if t/delta < m - n { // if the lengths are so different they immediately violate the threshold
             t = t * 2; // increase the width of the diagonal
         } else {
-            let p: usize = (t/delta - (n-m))/2; //diagonal band
+            //initialize matrix
+            let mut mat: Vec<Vec<usize>> = vec![vec![usize::MAX - 1; n+1]; 2]; // initialize values to ~infinity
+            for j in 0..n+1 { // initialize first row
+                mat[0][j] = j;
+            }
 
-            //current mat cell is [i+1][j+1]
+            let p: usize = (t/delta - (m-n))/2; //diagonal band
+
+            //current mat cell is [1][j+1]
             for i in 0..m { // for each row
                 // define j loop column range here
                 // restrict range to diagonal
                 let col_start:usize;
-                if i <= p {
+                if i <= (m-n) + p {
                     col_start = 0;
+                    mat[0][0] = i; // initialize the first column if you're on the edge of the matrix
                 } else {
-                    col_start = i-p;
+                    col_start = i - (m-n) - p;
                 }
-                let col_end:usize = min(n,i+(n-m)+p+1);
+                let col_end:usize = min(n,i+p);
 
                 thresh_break = true; // begin to check all costs vs threshold
                 for j in col_start..col_end { // for each column in diagonal band
@@ -89,19 +93,19 @@ fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
                         cost = delta;
                     }
 
-                    let diag: usize = mat[i][j] + cost; // match or sub
-                    let top: usize = mat[i][j+1] + delta; // indel
-                    let left: usize = mat[i+1][j] + delta; // indel
+                    let diag: usize = mat[0][j] + cost; // match or sub
+                    let top: usize = mat[0][j+1] + delta; // indel
+                    let left: usize = mat[1][j] + delta; // indel
 
                     // edit minimize cost
                     let costs: [usize; 3] = [diag,top,left];
                     let minval: Option<&usize> = costs.iter().min();
                     match minval {
-                        Some(min) => mat[i+1][j+1] = *min,
+                        Some(min) => mat[1][j+1] = *min,
                         None => println!("empty vector"),
                     }
 
-                    if mat[i+1][j+1] <= t { // if any cost is below the temp threshold t, ok to continue
+                    if mat[1][j+1] <= t { // if any cost is below the temp threshold t, ok to continue
                         thresh_break = false;
                     }
                 }
@@ -110,15 +114,12 @@ fn ukkonen(s1:&String, s2:&String) -> Option<usize> {
                     t = t * 2; // increase the temporary threshold t
                     break; // break the row for loop, start over with higher t
                 }
-            }
-            /*
-            for i in 0..m+1 {
-                println!("{:?}",mat[i]); //debug
-            }
-            */
 
+                mat[0] = mat[1].clone();
+            }
+            
             if !thresh_break { // if the temp threshold t was not broken to exit the row for loop
-                dist =  Some(mat[m][n]); // final element is the edit distance
+                dist =  Some(mat[1][n]); // final element is the edit distance
                 go = false; // stop while loop
             }
         }
